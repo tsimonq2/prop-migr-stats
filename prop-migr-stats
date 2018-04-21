@@ -34,7 +34,12 @@ def main():
     usercount = Counter(users)
 
     for user, uploads in usercount.items():
-        print(user + " has " + str(uploads) + " uploads in the proposed pocket.")
+        if uploads > 1:
+            plurality = "uploads"
+        else:
+            plurality = "upload"
+
+        print(user + " has " + str(uploads) + " " + plurality + " in the proposed pocket.")
 
 if __name__ == '__main__':
     try:
