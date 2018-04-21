@@ -1,0 +1,51 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import yaml
+import urllib2
+from collections import Counter
+from launchpadlib.launchpad import Launchpad
+
+def main():
+    lp = Launchpad.login_with("prop-migr-stats", "production", version="devel")
+    print("Logged into Launchpad.")
+    excuses = yaml.load(urllib2.urlopen("http://people.canonical.com/~ubuntu-archive/proposed-migration/update_excuses.yaml").read(), Loader=yaml.CSafeLoader)
+    print("Grabbed the excuses file.")
+
+    # This assumes we won't use this script for partner
+    archive = lp.distributions["ubuntu"].archives[0]
+    print("Assigned archive.")
+
+    # Store all of this in an array for easy iteration later
+    packages = []
+    for package in excuses["sources"]:
+        lppackageref = archive.getPublishedSources(source_name=package["item-name"], version=package["new-version"], pocket="Proposed", status="Published", order_by_date=True, exact_match=True)
+        if len(lppackageref) > 0:
+            # There should only be one entry here
+            packages.append(lppackageref[0])
+
+    print("Stored all of the package pointers.")
+
+    # Get the stats for each user
+    users = []
+    for package in packages:
+        user = ""
+        # Check if the package is a sync before trying to grab uploader details, for the sake of accuracy
+        if package.creator:
+            users.append(package.creator.display_name + " (" + package.creator.name + ")")
+        elif package.package_creator:
+            users.append(package.package_creator.display_name + " (" + package.package_creator.name + ")")
+
+    usercount = Counter(users)
+
+    print("Incrementation is done.")
+
+    for user, uploads in usercount.items():
+        print(user + " has " + str(uploads) + " uploads in the proposed pocket.")
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Exiting...")
+        exit()
